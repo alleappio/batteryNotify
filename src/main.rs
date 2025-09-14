@@ -1,11 +1,13 @@
+use std::time;
+use std::thread;
 use std::process::Command;
+
 use regex::Regex;
-use std::env;
 use clap::Parser;
 
 const BATTERY: &str = "BAT0";
 const THRESHOLD: u32 = 20;//%
-const CHECK_INTERVAL: u32 = 60; //seconds
+const CHECK_INTERVAL: u64 = 60; //seconds
 const NOTIFY_TIMEOUT: u32 = 10000; //ms
 
 #[derive(Parser, Debug)]
@@ -18,20 +20,20 @@ struct Args{
     threshold: u32,
 
     #[arg(short, long, default_value_t=CHECK_INTERVAL)]
-    check_interval: u32,
+    check_interval: u64,
 
     #[arg(short, long, default_value_t=NOTIFY_TIMEOUT)]
     notify_timeout: u32,
 }
 
-fn send_notification(level: u32){
+fn send_notification(level: u32, notify_timeout: u32){
     let level_string = format!("Battery level at {}%", level);
 
     Command::new("notify-send")
         .arg("-u")
         .arg("critical")
         .arg("-t")
-        .arg("10000")
+        .arg(notify_timeout.to_string())
         .arg("LOW BATTERY")
         .arg(level_string)
         .spawn()
@@ -61,14 +63,18 @@ fn get_battery_level(battery: &str) -> Option<u32>{
 
 fn main(){
     let args = Args::parse();
-    dbg!(args);
-    //let args: Vec<String> = env::args().collect();
-    //dbg!(args);
-
-
-    //let already_notified = false;
-    //let battery_level = get_battery_level("BAT1").unwrap();
-    //send_notification(battery_level);
+    let wait_duration = time::Duration::from_secs(args.check_interval);
+    let mut already_notified = false;
+    loop{
+        let battery_level = get_battery_level(&args.battery).unwrap();
+        if battery_level < args.threshold && !already_notified {
+            send_notification(battery_level, args.notify_timeout);
+            already_notified = true;
+        }else if battery_level > args.threshold{
+            already_notified = false;
+        }
+        thread::sleep(wait_duration);
+    }
 }
 
 
