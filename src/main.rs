@@ -1,5 +1,28 @@
 use std::process::Command;
 use regex::Regex;
+use std::env;
+use clap::Parser;
+
+const BATTERY: &str = "BAT0";
+const THRESHOLD: u32 = 20;//%
+const CHECK_INTERVAL: u32 = 60; //seconds
+const NOTIFY_TIMEOUT: u32 = 10000; //ms
+
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args{
+    #[arg(short, long, default_value_t=BATTERY.to_string())]
+    battery: String,
+
+    #[arg(short, long, default_value_t=THRESHOLD)]
+    threshold: u32,
+
+    #[arg(short, long, default_value_t=CHECK_INTERVAL)]
+    check_interval: u32,
+
+    #[arg(short, long, default_value_t=NOTIFY_TIMEOUT)]
+    notify_timeout: u32,
+}
 
 fn send_notification(level: u32){
     let level_string = format!("Battery level at {}%", level);
@@ -37,8 +60,15 @@ fn get_battery_level(battery: &str) -> Option<u32>{
 }
 
 fn main(){
-    let battery_level = get_battery_level("BAT1").unwrap();
-    send_notification(battery_level);
+    let args = Args::parse();
+    dbg!(args);
+    //let args: Vec<String> = env::args().collect();
+    //dbg!(args);
+
+
+    //let already_notified = false;
+    //let battery_level = get_battery_level("BAT1").unwrap();
+    //send_notification(battery_level);
 }
 
 
