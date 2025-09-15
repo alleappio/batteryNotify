@@ -6,7 +6,8 @@ use regex::Regex;
 use clap::Parser;
 
 const BATTERY: &str = "BAT0";
-const THRESHOLD: u32 = 20;//%
+const LOW_THRESHOLD: u32 = 20;//%
+const HIGH_THRESHOLD: u32 = 95;//%
 const CHECK_INTERVAL: u64 = 60; //seconds
 const NOTIFY_TIMEOUT: u32 = 10000; //ms
 
@@ -16,8 +17,11 @@ struct Args{
     #[arg(short, long, default_value_t=BATTERY.to_string())]
     battery: String,
 
-    #[arg(short, long, default_value_t=THRESHOLD)]
-    threshold: u32,
+    #[arg(short, long, default_value_t=LOW_THRESHOLD)]
+    low_threshold: u32,
+    
+    #[arg(long, default_value_t=HIGH_THRESHOLD)]
+    high_threshold: u32,
 
     #[arg(short, long, default_value_t=CHECK_INTERVAL)]
     check_interval: u64,
@@ -26,7 +30,7 @@ struct Args{
     notify_timeout: u32,
 }
 
-fn send_notification(level: u32, notify_timeout: u32){
+fn send_notification(level: u32, notify_timeout: u32, title: &str){
     let level_string = format!("Battery level at {}%", level);
 
     Command::new("notify-send")
@@ -34,7 +38,7 @@ fn send_notification(level: u32, notify_timeout: u32){
         .arg("critical")
         .arg("-t")
         .arg(notify_timeout.to_string())
-        .arg("LOW BATTERY")
+        .arg(title)
         .arg(level_string)
         .spawn()
         .expect("Failed to execute program");
@@ -64,14 +68,25 @@ fn get_battery_level(battery: &str) -> Option<u32>{
 fn main(){
     let args = Args::parse();
     let wait_duration = time::Duration::from_secs(args.check_interval);
-    let mut already_notified = false;
+    let mut already_notified_low = false;
+    let mut already_notified_high = false;
     loop{
         let battery_level = get_battery_level(&args.battery).unwrap();
-        if battery_level < args.threshold && !already_notified {
-            send_notification(battery_level, args.notify_timeout);
-            already_notified = true;
-        }else if battery_level > args.threshold{
-            already_notified = false;
+        dbg!(battery_level);
+        if battery_level < args.low_threshold && !already_notified_low {
+            send_notification(battery_level, args.notify_timeout, "LOW BATTERY");
+            already_notified_low = true;
+        }else if battery_level > args.low_threshold{
+            already_notified_low = false;
+        }
+        
+        if battery_level >= args.high_threshold && !already_notified_high{
+            println!("hello");
+            send_notification(battery_level, args.notify_timeout, "BATTERY CHARGED");
+            already_notified_high = true;
+        }else if battery_level <= args.high_threshold{
+            println!("hello 2");
+            already_notified_high = false;
         }
         thread::sleep(wait_duration);
     }
