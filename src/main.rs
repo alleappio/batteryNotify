@@ -31,7 +31,7 @@ struct Args{
 }
 
 fn send_notification(level: u32, notify_timeout: u32, title: &str){
-    let level_string = format!("Battery level at {}%", level);
+    let level_string = format!("⚡ Battery level at {}%", level);
 
     Command::new("notify-send")
         .arg("-u")
@@ -72,7 +72,6 @@ fn main(){
     let mut already_notified_high = false;
     loop{
         let battery_level = get_battery_level(&args.battery).unwrap();
-        dbg!(battery_level);
         if battery_level < args.low_threshold && !already_notified_low {
             send_notification(battery_level, args.notify_timeout, "LOW BATTERY");
             already_notified_low = true;
@@ -81,11 +80,9 @@ fn main(){
         }
         
         if battery_level >= args.high_threshold && !already_notified_high{
-            println!("hello");
             send_notification(battery_level, args.notify_timeout, "BATTERY CHARGED");
             already_notified_high = true;
         }else if battery_level <= args.high_threshold{
-            println!("hello 2");
             already_notified_high = false;
         }
         thread::sleep(wait_duration);
